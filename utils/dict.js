@@ -121,7 +121,8 @@ module.exports = {
         let parent;
 
         for (let i = 0; i < pList.length - 1; i += 1) {
-            const p = RegExp.quote(pList[i]);
+            // const p = RegExp.quote(pList[i]);
+            const p = new RegExp(`^${pList[i]}$`);
 
             parent = await dictModel.findOne({
                 Parent: parent || {
@@ -144,7 +145,8 @@ module.exports = {
         // the last name in the chain
         const resultList = [];
         let dictList;
-        const lastName = RegExp.quote(pList[pList.length - 1]);
+        // const lastName = RegExp.quote(pList[pList.length - 1]);
+        const lastName = new RegExp(`^${pList[pList.length - 1]}$`);
 
         dictList = await dictModel.find({
             Parent: parent || {
