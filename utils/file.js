@@ -3,15 +3,13 @@ const multer = require('multer');
 const fse = require('fs-extra');
 const path = require('path');
 const mime = require('mime');
-const thumb = require('node-thumbnail').thumb;
 const parse = require('csv-parse');
 const AdmZip = require('adm-zip');
-// const unzip = require('unzip');
 const iconv = require('iconv-lite');
 const child_process = require('child_process');
 const uuid = require('uuid');
-// const xlsx = require('node-xlsx');
 const xlsx = require('xlsx');
+const sharp = require('sharp');
 
 // config
 const config = Object.merge(
@@ -166,24 +164,25 @@ const fileDeleteSync = function (path, name) {
 /**
  * 解析zip(csv)文件 返回数组
  */
+// TODO: modified, to be tested
 let unzipFile = function (file) {
-  return new Promise(async (resolve) => {
+  return new Promise((resolve) => {
     let zip = new AdmZip(file);
     let zipEntries = zip.getEntries();
-    let resultArr = [];
-    let first = true;
-    for (let i = 0; i < zipEntries.length; i++) {
-      let item = zipEntries[i];
-      if (item.isDirectory === false) {
-        let tmpStr = iconv.decode(item.getData(), 'gbk');
-        let tmpArr = await parseCSVSync(tmpStr);
-        if (tmpArr && false === first) {
-          tmpArr.splice(0, 1);
-        }
-        resultArr = resultArr.concat(tmpArr);
-        first = false;
-      }
-    }
+    // let resultArr = [];
+    // let first = true;
+    // for (let i = 0; i < zipEntries.length; i++) {
+    //   let item = zipEntries[i];
+    //   if (item.isDirectory === false) {
+    //     let tmpStr = iconv.decode(item.getData(), 'gbk');
+    //     let tmpArr = await parseCSVSync(tmpStr);
+    //     if (tmpArr && false === first) {
+    //       tmpArr.splice(0, 1);
+    //     }
+    //     resultArr = resultArr.concat(tmpArr);
+    //     first = false;
+    //   }
+    // }
 
     function parseCSVSync (str) {
       return new Promise((resolve) => {
@@ -193,7 +192,28 @@ let unzipFile = function (file) {
       });
     }
 
-    return resolve(resultArr);
+    return Promise.all(zipEntries.map((item, idx) => {
+      return new Promise((resv) => {
+        if (item.isDirectory === false) {
+          let tmpStr = iconv.decode(item.getData(), 'gbk');
+          parseCSVSync(tmpStr).then((tmpArr) => {
+            if (tmpArr && idx > 0) {
+              tmpArr.splice(0, 1);
+            }
+
+            resv(tmpArr);
+          });
+        }
+      })
+    })).then((...tmpArr) => {
+      let resultArr = [];
+      
+      for (let i = 0; i < tmpArr.length; i += 1) {
+        resultArr = resultArr.concat(tmpArr[i]);
+      }
+
+      return resolve(resultArr);
+    })
   });
 };
 
@@ -278,6 +298,7 @@ const storageToDir = multer.diskStorage({
 /**
  * 制作略缩图 中间件
  */
+// TODO: modified, to be tested
 const makeThumb = (width = 160) => {
   return async function (req, res, next) {
     if (!req.file) {
@@ -295,28 +316,40 @@ const makeThumb = (width = 160) => {
     if (SupportedImageTypes.indexOf(ext) >= 0) {
       // 图片，生成缩略图。
       try {
-        await thumb({
-          source: path.join(staticRoot, 'image/', req.file.myDir + '/', req.file.filename),
-          destination: path.join(staticRoot, 'thumb/', req.file.myDir + '/'),
-          prefix: '',
-          suffix: '',
-          digest: false,
-          hashingType: 'sha1',    // 'sha1', 'md5', 'sha256', 'sha512'
-          width: width,
-          concurrency: 1,         // number of CPUs
-          quiet: false,           // if set to 'true', console.log status messages will be supressed
-          overwrite: false,
-          skip: true,             // Skip generation of existing thumbnails
-          basename: undefined,    // basename of the thumbnail. If unset, the name of the source file is used as basename.
-          ignore: true,           // Ignore unsupported files in "dest"
-        },
-          (file, err) => {
-            if (err) {
-              res.makeError(500, '生成缩略图失败！' + err);
-              if (next)
-                return next('route');
+        sharp(path.join(staticRoot, 'image/', req.file.myDir + '/', req.file.filename))
+          .resize(width)
+          .toFile(
+            path.join(staticRoot, 'thumb/', req.file.myDir + '/', req.file.filename),
+            (err /* , file */) => {
+              if (err) {
+                res.makeError(500, '生成缩略图失败！' + err);
+                if (next)
+                  return next('route');
+              }
             }
-          });
+          );
+        // await thumb({
+        //   source: path.join(staticRoot, 'image/', req.file.myDir + '/', req.file.filename),
+        //   destination: path.join(staticRoot, 'thumb/', req.file.myDir + '/'),
+        //   prefix: '',
+        //   suffix: '',
+        //   digest: false,
+        //   hashingType: 'sha1',    // 'sha1', 'md5', 'sha256', 'sha512'
+        //   width: width,
+        //   concurrency: 1,         // number of CPUs
+        //   quiet: false,           // if set to 'true', console.log status messages will be supressed
+        //   overwrite: false,
+        //   skip: true,             // Skip generation of existing thumbnails
+        //   basename: undefined,    // basename of the thumbnail. If unset, the name of the source file is used as basename.
+        //   ignore: true,           // Ignore unsupported files in "dest"
+        // },
+        //   (file, err) => {
+        //     if (err) {
+        //       res.makeError(500, '生成缩略图失败！' + err);
+        //       if (next)
+        //         return next('route');
+        //     }
+        //   });
       } catch (ex) {
         res.makeError(500, '生成缩略图失败！' + ex);
         if (next)
