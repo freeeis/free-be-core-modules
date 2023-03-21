@@ -164,7 +164,6 @@ const fileDeleteSync = function (path, name) {
 /**
  * 解析zip(csv)文件 返回数组
  */
-// TODO: modified, to be tested
 let unzipFile = function (file) {
   return new Promise((resolve) => {
     let zip = new AdmZip(file);
@@ -298,7 +297,6 @@ const storageToDir = multer.diskStorage({
 /**
  * 制作略缩图 中间件
  */
-// TODO: modified, to be tested
 const makeThumb = (width = 160) => {
   return async function (req, res, next) {
     if (!req.file) {

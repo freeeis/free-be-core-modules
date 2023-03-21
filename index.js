@@ -1,10 +1,13 @@
 const utils = require('./utils');
 const validatorsUtils = require('./utils/validators');
+const hooks = require('./hooks');
 
 module.exports = {
   config: {
     asRouteService: true,
     routeRoot: '',
+    redisPort: 6379,
+    redisHost: '127.0.0.1',
   },
   data: {
     dictionary: {
@@ -136,5 +139,6 @@ module.exports = {
   ...utils,
   validators: {
     ...validatorsUtils,
-  }
+  },
+  hooks,
 };

@@ -83,15 +83,15 @@ async function _process_response_error(res) {
 }
 
 module.exports = {
-    onAppReady: (app, mdl) => {
+    onAppReady: async (app, mdl) => {
         // connecting to redis server
-        let cache = redis.createClient(mdl.config.port || 6379, mdl.config.host || '127.0.0.1');
+        let cache = redis.createClient({ socket : { host: mdl.config.redisHost || '127.0.0.1', port: mdl.config.redisPort || 6379 } });
 
         cache.on('error', (err) => {
             app.logger.error(`ERROR in redis module: ${err}`);
         });
+        cache.on("ready", async () => {
 
-        if (cache) {
             app.redis = cache;
 
             // we support string, json object
@@ -100,22 +100,18 @@ module.exports = {
                     if (!k) return;
 
                     return await new Promise((resolve, reject) => {
-                        cache.set(k, JSON.stringify(v), (err) => {
-                            if (err) {
-                                reject(err);
-                            } else {
-                                if (t) {
-                                    cache.expire(k, t / 1000, (error) => {
-                                        if (error) {
-                                            reject(error);
-                                        } else {
-                                            resolve();
-                                        }
-                                    });
-                                } else {
+                        cache.set(k, JSON.stringify(v)).then(() => {
+                            if (t) {
+                                cache.expire(k, t / 1000).then(() => {
                                     resolve();
-                                }
+                                }).catch((err) => {
+                                    reject(err);
+                                });
+                            } else {
+                                resolve();
                             }
+                        }).catch((err) => {
+                            reject(err);
                         });
                     });
                 },
@@ -123,12 +119,16 @@ module.exports = {
                     if (!k) return;
 
                     return await new Promise((resolve, reject) => {
-                        cache.get(k, (err, data) => {
-                            if (err) {
-                                reject(err);
-                            } else {
-                                resolve(JSON.parse(data));
+                        cache.get(k).then((data) => {
+                            let obj = {};
+                            try {
+                                obj = JSON.parse(data);
+                            } catch(_){
+                                //
                             }
+                            resolve(obj);
+                        }).catch((err) => {
+                            reject(err);
                         });
                     });
                 },
@@ -136,23 +136,19 @@ module.exports = {
                     if (!k) return;
 
                     return await new Promise((resolve, reject) => {
-                        cache.del(k, (err) => {
-                            if (err) {
-                                reject(err);
-                            } else {
-                                resolve();
-                            }
+                        cache.del(k).then(() => {
+                            resolve();
+                        }).catch((err) => {
+                            reject(err);
                         });
                     });
                 },
                 keys: async (p = "*") => {
                     return await new Promise((resolve, reject) => {
-                        cache.keys(p, (err, data) => {
-                            if (err) {
-                                reject(err);
-                            } else {
-                                resolve(data);
-                            }
+                        cache.keys(p).then((data) => {
+                            resolve(data);
+                        }).catch((err) => {
+                            reject(err);
                         });
                     });
                 },
@@ -162,7 +158,11 @@ module.exports = {
             }
 
             app.cache.put = app.cache.set;
-        }
+
+            app.logger.debug('redis is ready!');
+        });
+
+        cache.connect();
     },
     onLoadRouters: async (app, mdl) => {
         // init system config
