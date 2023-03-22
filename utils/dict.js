@@ -98,18 +98,20 @@ module.exports = {
      * Get the label for a given dictionary object according to the locale settings
      * 
      * @param {Object} d The given dictionary object
+     * @param {String} locale The locale specified in the request
      */
-    dictLabel: function (d) {
+    dictLabel: function (d, locale) {
         if (!d || !d.Labels || !Array.isArray(d.Labels)) return {};
-        return d.Labels.find(v => v.Locale === (this.app.ctx.locale || 'zh-cn'));
+        return d.Labels.find(v => v.Locale === (this.app.ctx.locale || locale || 'zh-cn'));
     },
     /**
      * Get the dictionary value according to the given key.
      * 
-     * @param {*} n Name of the dict. Could use dot to seperate multiple levels
-     * @param {*} exact Only want to get the content of the specified dict but not it's children
+     * @param {String} n Name of the dict. Could use dot to seperate multiple levels
+     * @param {Boolean} exact Only want to get the content of the specified dict but not it's children
+     * @param {String} locale The locale specified in the request
      */
-    dict: async function (n, exact = false) {
+    dict: async function (n, exact = false, locale) {
         if (!n || typeof n !== 'string') {
             throw new Error('Get dict failed!');
         }
@@ -181,7 +183,7 @@ module.exports = {
                     Image: dl.Image
                 }
 
-                const localeLabel = dl.Labels.find(v => v.Locale === (this.app.ctx.locale || 'zh-cn'));
+                const localeLabel = dl.Labels.find(v => v.Locale === (this.app.ctx.locale || locale || 'zh-cn'));
 
                 resultList[i].Label = (localeLabel && localeLabel.Label) ? localeLabel.Label : dl.Value
                 resultList[i].Description = (localeLabel && localeLabel.Description) ? localeLabel.Description : ''

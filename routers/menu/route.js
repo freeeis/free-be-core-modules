@@ -12,7 +12,8 @@ router.get('/', (req, res, next) => {
         'Permission',
         'Category',
         'Icon',
-        'Route'
+        'Route',
+        'Description',
     ];
 
     res.locals.filter = {
@@ -74,7 +75,7 @@ router.get('/menus',
         res.locals.filter.Category = req.query.category || null;
         res.locals.filter.Enabled = true;
 
-        res.locals.options.limit = 100000;
+        // res.locals.options.limit = 100000;
 
         // res.locals.fields=[
         //     'Parent',
@@ -88,7 +89,7 @@ router.get('/menus',
 
         return next();
     },
-    router.FindDocuments('menu', false, async (req, res) => {
+    router.FindAllDocuments('menu', false, async (req, res) => {
         // if we have passport enabled, check permission
         const passport = res.app.modules.passport;
         let menus = [];

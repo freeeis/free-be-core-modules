@@ -15,6 +15,15 @@ module.exports = {
         const kwf = {};
         let range, start, end;
         switch (ff.Type) {
+          case 'Number':
+          case 'NumberRange':
+            range = query[fName].split('~');
+            start = range[0] || -Infinity;
+            end = range[1] || Infinity;
+            filters[ff.Name] = { $gte: start, $lt: end };
+            break;
+          case 'Date':
+          case 'Time':
           case "DateRange":
           case "TimeRange":
             range = query[fName].split("~");
@@ -34,7 +43,7 @@ module.exports = {
               // separate string filter field, as select!
               filters[ff.Name] = query[ff.Name];
             } else if (query.kw) {
-              kwf[ff.Name] = RegExp.quote(query.kw);
+              kwf[ff.Name] = RegExp.quote(query.kw, 'i');
               kwFilter.push(kwf);
             }
             break;

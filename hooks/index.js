@@ -1,19 +1,29 @@
 const redis = require('redis');
 const UAParser = require('ua-parser-js');
 
-const writeLogMW = (mdl) => (req, res, next) => {
+const writeLogMW = (mdl) => async (req, res, next) => {
+    if (res.logWritten) {
+        if (next && !res._headerSent) {
+            return next();
+        }
 
-    // Database: { type: 'Array', default: [] },
-    // ClientIP: { type: 'String' },
-    // ReturnCode: { type: 'String' },
+        return;
+    }
+
+    res.logWritten = true;
 
     if (res.locals.sysLog) {
+        // check access frequency
+        await checkFrequency(mdl, req, res);
+
         res.locals.sysLog.Module = mdl.name;
 
         if (res.locals.return) {
             res.locals.sysLog.ReturnStatus = res.locals.return.code;
             // res.locals.sysLog.ReturnCode = res.locals.return.returnData.msg.code;
             res.locals.sysLog.ReturnMsg = res.locals.return.returnData.msg.message || res.locals.return.returnData.msg;
+        } else if (res.statusCode) {
+            res.locals.sysLog.ReturnStatus = res.statusCode;
         }
 
         if (res.locals.sysLog.StartTime)
@@ -26,8 +36,10 @@ const writeLogMW = (mdl) => (req, res, next) => {
             res.app.models.log.create(res.locals.sysLog);
     }
 
-    if (next) {
+    if (next && !res._headerSent) {
         return next();
+    } else {
+        return;
     }
 }
 
@@ -81,6 +93,119 @@ async function _process_response_error(res) {
         }
     }
 }
+
+const logDataSchema = {
+    User: { type: 'String' },
+    Url: { type: 'String', required: true },
+    Database: { type: 'Array', default: [] },
+    ClientIP: { type: 'String' },
+    ClientOS: { type: 'String' },
+    Browser: { type: 'String' },
+    UserAgent: { type: 'String' },
+    ResponseTime: { type: 'Number' },
+    Module: { type: 'String' },
+    ReturnStatus: { type: 'String' },
+    ReturnCode: { type: 'String' },
+    ReturnMsg: { type: 'String' },
+
+    StartTime: { type: 'Date' },
+    Ip: { type: 'String' },
+
+    lock: {type: 'Object' },
+};
+
+const checkFrequency = async (mdl, req, res, before) => {
+    if (res.locals.blocked || !res.locals.sysLog) return false;
+
+    const ctls = mdl.config.frequencyControls || [];
+    for(let i = 0; i < ctls.length; i += 1) {
+        const ctl = ctls[i];
+        let urlMmatch = false;
+
+        if (!ctl.url) {
+            urlMmatch = true;
+        } else if (typeof ctl.url === 'object' && new RegExp(ctl.url).test(req.originalUrl)) {
+            urlMmatch = true;
+        }
+
+        if (urlMmatch) {            
+            const userCondition = ctl.shared ? {} : (req.user ? (ctl.ignoreUser ? {} : {User: req.user.id}) : (ctl.ignoreGuest ? {} : {Ip: res.locals.sysLog.Ip || ''}));
+            const urlCondition = ctl.url ? {Url: ctl.url} : {};
+            const lockRecord =  await mdl.app.models.log.findOne({...urlCondition, ...userCondition, lock: {$exists: true}}, {lock: 1, CreatedDate: 1}).sort({CreatedDate: -1}).lean()|| {};
+            const lock = (lockRecord && lockRecord.lock) || {};
+
+            let lockLevel = typeof lock.level === 'number' ? lock.level : -1;
+            lockLevel = lockLevel < -1 ? -1 : lockLevel;
+            
+            const lockTime = lock.lock || 0;
+            const lockedTime = (lockRecord.CreatedDate ? Date.now() - lockRecord.CreatedDate : 0);
+
+            if (lockedTime < lockTime) {
+                // continue to lock
+                res.locals.blocked = true;
+                res.app.logger.error(`still in lock (level ${lockLevel})... ${req.originalUrl}`);
+                const cLevel = (ctl.levels || [])[lockLevel] || {};
+
+                if (cLevel.data) {
+                    res.endWithData(typeof cLevel.data === 'function' ? cLevel.data(req, res) : cLevel.data);
+                } else {
+                    const msg = cLevel.lockedMessage || cLevel.message || cLevel.lockMessage;
+                    res.endWithErr(400, msg ? ((typeof msg === 'function') ? msg(cLevel, lockTime - lockedTime) : msg) : `您的操作过于频繁，请稍后再试！`, mdl);    
+                }
+                return false;
+            }
+
+            for (let j = (lockLevel >= ctl.levels.length - 1) ? (ctl.levels.length - 1) : (lockLevel + 1); j < ctl.levels.length; j += 1) {
+                const lv = ctl.levels[j];
+
+                if (lv.return && before) {
+                    continue;
+                }
+
+                if (!lv.return && !before) {
+                    continue;
+                }
+
+                if (lv.return === 'fail' && lv.return === 200) {
+                    continue;
+                } else if (lv.return && lv.return !== 'fail' && lv.return !== res.locals.return.code) {
+                    continue;
+                }
+
+                // check times
+                const existsRecords = await mdl.app.models.log.countDocuments({CreatedDate: {$gt: new Date(new Date() - lv.duration)}, ...urlCondition, ...userCondition});
+                if (existsRecords > lv.times) {
+                    // lock and increase lock level
+                    res.locals.sysLog.lock = lv;
+                    res.locals.sysLog.lock.level = j;
+
+                    res.locals.blocked = true;
+                    res.app.logger.error(`lock triggerred (level ${j})... ${req.originalUrl}`);
+
+                    if (lv.data) {
+                        res.endWithData(typeof lv.data === 'function' ? lv.data(req, res) : lv.data);
+                    } else {
+                        const msg = lv.lockMessage || lv.message;
+                        res.endWithErr(400, msg ? ((typeof msg === 'function') ? msg(lv) : msg) : `您的操作过于频繁，已被锁定！`, mdl);    
+                    }
+                    
+                    return false;
+                } else if (lockedTime > lv.duration && lockLevel > -1) {
+                    // unlock and decrease lock level
+                    res.app.logger.error(`unlock (level ${lockLevel})... ${req.originalUrl}, `);
+                    res.locals.sysLog.lock = ctl.levels[lockLevel - 1] || {
+                        locked: false,
+                    };
+                    res.locals.sysLog.lock.level = lockLevel - 1;
+
+                    break;
+                } else {
+                    break;
+                }
+            }
+        }
+    }
+};
 
 module.exports = {
     onAppReady: async (app, mdl) => {
@@ -163,6 +288,14 @@ module.exports = {
         });
 
         cache.connect();
+
+        // create log model
+        app.db.initModuleSchema(app, mdl, {
+            log: logDataSchema,
+        });
+        app.db.initModuleModel(app, mdl, {
+            log: '',
+        });
     },
     onLoadRouters: async (app, mdl) => {
         // init system config
@@ -200,37 +333,34 @@ module.exports = {
         });
 
     },
-    beforeLastMiddleware: (app) => {
+    beforeLastMiddleware: (app, mdl) => {
         app.get(`${app.config['baseUrl'] || ''}/mourning`,
             async (req, res, next) => {
-                const systemConf = app.modules['system-config'];
-                if (systemConf) {
-                    const mourningList = await systemConf.get('哀悼日', '网站设置');
-                    if (mourningList && mourningList.length) {
-                        for (let i = 0; i < mourningList.length; i += 1) {
-                            const item = mourningList[i];
-                            const range = (item.MourningDay || '').split('~');
-                            if (range && range.length === 2) {
-                                const now = new Date();
-                                const start = new Date(range[0]);
-                                const end = new Date(range[1]);
+                const mourningList = await mdl.getSystemConfig('哀悼日', '网站设置');
+                if (mourningList && mourningList.length) {
+                    for (let i = 0; i < mourningList.length; i += 1) {
+                        const item = mourningList[i];
+                        const range = (item.MourningDay || '').split('~');
+                        if (range && range.length === 2) {
+                            const now = new Date();
+                            const start = new Date(range[0]);
+                            const end = new Date(range[1]);
 
-                                if (item.Year) {
-                                    start.setFullYear(item.Year);
-                                    end.setFullYear(item.Year);
-                                } else {
-                                    const thisYear = now.getFullYear();
-                                    start.setFullYear(thisYear);
-                                    end.setFullYear(thisYear);
-                                }
+                            if (item.Year) {
+                                start.setFullYear(item.Year);
+                                end.setFullYear(item.Year);
+                            } else {
+                                const thisYear = now.getFullYear();
+                                start.setFullYear(thisYear);
+                                end.setFullYear(thisYear);
+                            }
 
-                                if (now >= start && now < end) {
-                                    // res.locals.persData = res.locals.persData || {};
-                                    // res.locals.persData.mourning = true;
-                                    res.addData({mourning: true});
+                            if (now >= start && now < end) {
+                                // res.locals.persData = res.locals.persData || {};
+                                // res.locals.persData.mourning = true;
+                                res.addData({mourning: true});
 
-                                    return next();
-                                }
+                                return next();
                             }
                         }
                     }
@@ -239,43 +369,6 @@ module.exports = {
                 return next();
             }
         );
-
-        // app.use(async (req, res, next) => {
-        //     // init system config
-        //     const systemConf = app.modules['system-config'];
-        //     if (systemConf) {
-        //         const mourningList = await systemConf.get('哀悼日', '网站设置');
-        //         if (mourningList && mourningList.length) {
-        //             for (let i = 0; i < mourningList.length; i += 1) {
-        //                 const item = mourningList[i];
-        //                 const range = (item.MourningDay || '').split('~');
-        //                 if (range && range.length === 2) {
-        //                     const now = new Date();
-        //                     const start = new Date(range[0]);
-        //                     const end = new Date(range[1]);
-
-        //                     if (item.Year) {
-        //                         start.setFullYear(item.Year);
-        //                         end.setFullYear(item.Year);
-        //                     } else {
-        //                         const thisYear = now.getFullYear();
-        //                         start.setFullYear(thisYear);
-        //                         end.setFullYear(thisYear);
-        //                     }
-
-        //                     if (now >= start && now < end) {
-        //                         res.locals.persData = res.locals.persData || {};
-        //                         res.locals.persData.mourning = true;
-
-        //                         return next();
-        //                     }
-        //                 }
-        //             }
-        //         }
-        //     }
-
-        //     return next();
-        // })
 
         app.use(async (req, res, next) => {
             await _process_response_error(res);
@@ -290,7 +383,9 @@ module.exports = {
                 res.makeError(code, msg, mdl);
                 await _process_response_error(res)
 
-                res.status(res.locals.err.code).send({ msg: res.locals.err.msg });
+                if (!res._headerSent) {
+                    res.status(res.locals.err.code).send({ msg: res.locals.err.msg });
+                }
             };
 
             return next();
@@ -334,7 +429,7 @@ module.exports = {
 
     // system logs
     onBegin: (app, mdl) => {
-        app.use((req, res, next) => {
+        app.use(async (req, res, next) => {
             const ignoreList = mdl.config.ignoreList || [];
             for (let i = 0; i < ignoreList.length; i += 1) {
                 const il = ignoreList[i];
@@ -344,8 +439,8 @@ module.exports = {
                 if (typeof il === 'object' && new RegExp(il).test(req.originalUrl)) return next();
             }
 
-            res.app.config.beforeReturnError = res.app.config.beforeReturnError || [];
-            res.app.config.beforeReturnError.push(writeLogMW(mdl));
+            res.beforeReturnErrorMws = res.beforeReturnErrorMws || [];
+            res.beforeReturnErrorMws.push(writeLogMW(mdl));
 
             res.locals.sysLog = {
                 UserAgent: req.headers['user-agent'],
@@ -365,6 +460,9 @@ module.exports = {
                 res.locals.sysLog.ClientOS = uaInfo.os && uaInfo.os.name;
             }
 
+            // check access frequency
+            await checkFrequency(mdl, req, res, true);
+            
             return next();
         });
     },

@@ -8,6 +8,143 @@ module.exports = {
     routeRoot: '',
     redisPort: 6379,
     redisHost: '127.0.0.1',
+
+    ignoreList: [],
+    frequencyControls: [
+        // {
+        //     url: /\/api\/(xxx|yyy)(\/?.*)*/,          // url pattern or string
+        //     ignoreGuest: false,     // will not check guest when set to true
+        //     ignoreUser: false,      // will not check login users when set to true
+        //     shared: false,          // will check global times no matter who made such access logs
+        //     levels: [               // current lovel stored in a data collection
+        //         {
+        //             duration: 10000,  // how long time
+        //             return: '',       // 200, 401, 400, '' (any), 'fail' (!==200)
+        //             times: 10,       // with how many access logs
+        //             lock: 10000,        // will log how long time (ms)
+        //             // data: (req, res) => { // object or string, to return as the data when locking
+        //             //     return {
+        //             //         total: Math.ceil(Math.random() * 99999),
+        //             //         docs: [{
+        //             //         },{}],
+        //             //         page: 1,
+        //             //         limit: 100,
+        //             //     };
+        //             // },
+        //             message: () => `您的操作过快，已被锁定！`,    // and with this error message, could be function or string
+        //             lockMessage: (level) => `您的操作过快，将被锁定${level.lock / 1000}秒！`,
+        //             lockedMessage: (level, leftTime) => `您已被锁定，请等待${leftTime / 1000}秒！`,
+        //         },
+        //         {
+        //             duration: 60000,
+        //             times: 20,
+        //             lock: 60000,
+        //             message: (level) => `您的操作过快，将被锁定${level.lock / 1000}秒！`,    // and with this error message, could be function or string
+        //             lockMessage: (level) => `您的操作过快，将被锁定${level.lock / 1000}秒！`,
+        //             lockedMessage: (level, leftTime) => `您已被锁定，请等待${leftTime / 1000}秒！`,
+        //         },
+        //         {
+        //             duration: 120000,
+        //             times: 30,
+        //             lock: 3600000,
+        //             message: (level) => `您的操作过快，将被锁定${level.lock / 1000}秒！`,    // and with this error message, could be function or string
+        //             lockMessage: (level) => `您的操作过快，将被锁定${level.lock / 1000}秒！`,
+        //             lockedMessage: (level, leftTime) => `您已被锁定，请等待${leftTime / 1000}秒！`,
+        //         },
+        //     ],
+        // },
+        // {
+        //     url: /\/api\/login(\/?.*)*/,
+        //     levels: [
+        //         {
+        //             duration: 10000,
+        //             // return: 'fail',
+        //             times: 10,
+        //             lock: 10000,
+        //         },
+        //         {
+        //             duration: 30000,
+        //             // return: 'fail',
+        //             times: 15,
+        //             lock: 30000,
+        //         },
+        //         {
+        //             duration: 600000,
+        //             // return: 'fail',
+        //             times: 30,
+        //             lock: 1800000,
+        //             message: (level) => `您的操作过快，将被锁定${level.lock / 1000}秒！`,    // and with this error message, could be function or string
+        //         }
+        //     ],
+        // },
+        // {
+        //     url: '',                // no url means global access frequency control for a user or ip
+        //     ignoreGuest: false,
+        //     ignoreUser: false,
+        //     levels: [
+        //         {
+        //             duration: 10000,
+        //             times: 5,
+        //             lock: 5,
+        //             message: () => `bye！`,
+        //         },
+        //         {
+        //             duration: 3000,
+        //             times: 10,
+        //             lock: 60000,
+        //             message: () => `bye 2！`,
+        //         },
+        //     ],
+        // },
+    ],
+    accessRatios: [
+        // {
+        //     name: 'AU',
+        //     groups: 'User,Ip',
+        //     sort: true, // true, false/0, 1, -1, 100, -100, '-1', '1'
+        //     limit: 100,
+        //     sum: false,
+        //     unique: false, // count groups with true, count for each group with false
+        // },
+        // {
+        //     name: 'PV',
+        //     // sort: true, // true, false/0, 1, -1, 100, -100, '-1', '1'
+        //     // limit: 100,
+        //     sum: false,
+        //     groups: [
+        //         {
+        //             name: 'policy details',
+        //             url: /\/api\/portal\/policy\/[a-z0-9A-Z].*/,
+        //             removeQueries: true,
+        //         },
+        //         {
+        //             name: 'standard details',
+        //             url: /\/api\/portal\/standard\/[a-z0-9A-Z].*/,
+        //             removeQueries: true,
+        //         },
+        //     ],
+        // },
+        // {
+        //     name: 'UV',
+        //     // sort: true, // true, false/0, 1, -1, 100, -100, '-1', '1'
+        //     // limit: 100,
+        //     sum: false,
+        //     groups: [
+        //         {
+        //             name: 'policy details',
+        //             url: /\/api\/portal\/policy\/[a-z0-9A-Z].*/,
+        //             removeQueries: true,
+        //             groups: 'User,Ip',
+        //         },
+        //         {
+        //             name: 'standard details',
+        //             url: /\/api\/portal\/standard\/[a-z0-9A-Z].*/,
+        //             removeQueries: true,
+        //             groups: 'User,Ip',
+        //         },
+        //     ],
+        // },
+    ],
   },
   data: {
     dictionary: {

@@ -51,4 +51,49 @@ router.post('/',
     },
 )
 
+/**
+ * Import for dictionary translations.
+ * 
+ * @param {c} contents for the translations with lines of format
+ *            Name\Label in Chinese\tlocale\tTranslation, exg.
+ *            "xxx类型\t类型一\ten-us\tType One"
+ */
+router.post('/trans', 
+  async (req, res, next) => {
+    if (!req.body.c) return next();
+    const lines = req.body.c.split('\n').filter(ll => !!ll);
+    for (let i = 0; i < lines.length; i += 1) {
+      const line = lines[i].split('\t');
+      if (line.length !== 4) continue;
+
+      const theDict = await res.app.models.dictionary.findOne({
+        Name: line[0],
+        "Labels.Label": line[1],
+      });
+
+      if (!theDict) continue;
+      
+      theDict.Labels = theDict.Labels || [];
+      const cnLabel = theDict.Labels.find((lb) => lb.Locale === 'zh-cn');
+      if (cnLabel && cnLabel.Label === line[1]) {
+        const theLabel = theDict.Labels.find((lb) => lb.Locale === line[2]);
+
+        if (theLabel) {
+          theLabel.Label = line[3];
+        } else {
+          theDict.Labels.push({
+            Label: line[3],
+            Locale: line[2],
+            Description: '',
+          });
+        }
+
+        await theDict.save();
+      }
+    }
+    
+    return next();
+  }
+);
+
 module.exports = router;

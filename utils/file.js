@@ -474,6 +474,7 @@ const zip = function (f, content, comment = '') {
           res.locals.zipObject.writeZip(fName);
           res.status(200);
           res.download(fName);
+
           return;
         }
       }

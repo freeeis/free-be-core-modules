@@ -27,7 +27,9 @@ router.get('/',
             if (res.locals.data && res.locals.data.total) {
                 // parse object values (as we always store the value as string)
 
-                res.locals.data.docs.forEach(doc => {
+                for (let i = 0; i < res.locals.data.docs.length; i += 1) {
+                    const doc = res.locals.data.docs[i];
+
                     if (doc.Field && doc.Field.Type && doc.Value) {
                         switch (doc.Field.Type) {
                             case 'Check':
@@ -57,7 +59,7 @@ router.get('/',
                                 break;
                         }
                     }
-                })
+                }
             }
         }
     ));

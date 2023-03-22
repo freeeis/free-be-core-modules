@@ -20,6 +20,7 @@ module.exports = {
                 // update
                 theConfig.Description = d;
 
+                if (f && f.Index) theConfig.Index = Number(f.Index);
                 if (typeof i === 'number') theConfig.Index = i;
 
                 if (t) theConfig.Type = t;
