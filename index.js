@@ -196,10 +196,7 @@ module.exports = {
     config: {
       Category: { type: "String", required: true, default: "DEFAULT" },
       Name: { type: "String", required: true },
-      // // Type can be: String, Number, Boolean, Date, Rich, Object, Org, Dict
-      // Type: { type: 'String', required: true, default: 'String' },
-      // // when Type is Dict, we should know which dict we are referring to
-      // Refer: { type: 'String', },
+      
       Value: { type: "String", default: "" },
       Description: { type: "String" },
       Index: { type: "Number", required: true },
@@ -207,21 +204,32 @@ module.exports = {
       BuiltIn: { type: "Boolean", default: false },
       // the field definition for special headend render
       Field: { type: "Object" },
+
+      // Type can be: String, Number, Boolean, Date, Rich, Object, Org, Dict or any customized data type
+      Type: { type: 'String', required: true, default: 'String' },
+      // when Type is Dict, we should know which dict we are referring to
+      Refer: { type: 'String', },
+
     },
-    // log: {
-    //     User: { type: 'String' },
-    //     Url: { type: 'String', required: true },
-    //     Database: { type: 'Array', default: [] },
-    //     ClientIP: { type: 'String' },
-    //     ClientOS: { type: 'String' },
-    //     Browser: { type: 'String' },
-    //     UserAgent: { type: 'String' },
-    //     ResponseTime: { type: 'Number' },
-    //     Module: { type: 'String' },
-    //     ReturnStatus: { type: 'String' },
-    //     ReturnCode: { type: 'String' },
-    //     ReturnMsg: { type: 'String' },
-    // }
+    log: {
+        User: { type: 'String' },
+        Url: { type: 'String', required: true },
+        Database: { type: 'Array', default: [] },
+        ClientIP: { type: 'String' },
+        ClientOS: { type: 'String' },
+        Browser: { type: 'String' },
+        UserAgent: { type: 'String' },
+        ResponseTime: { type: 'Number' },
+        Module: { type: 'String' },
+        ReturnStatus: { type: 'String' },
+        ReturnCode: { type: 'String' },
+        ReturnMsg: { type: 'String' },
+
+        StartTime: { type: 'Date' },
+        Ip: { type: 'String' },
+
+        lock: {type: 'Object' },
+    },
   },
   i18n: {
     "en-us": {

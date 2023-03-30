@@ -91,7 +91,7 @@ router.put('/',
 router.post(
     '/upload',
     (req, res, next) => {
-        res.app.modules['core-modules'].fileUploadWithoutLimit(req, res, next);
+        router.mdl.fileUploadWithoutLimit(req, res, next);
     },
     // upload,
     (req, res, next) => {

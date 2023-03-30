@@ -94,25 +94,25 @@ async function _process_response_error(res) {
     }
 }
 
-const logDataSchema = {
-    User: { type: 'String' },
-    Url: { type: 'String', required: true },
-    Database: { type: 'Array', default: [] },
-    ClientIP: { type: 'String' },
-    ClientOS: { type: 'String' },
-    Browser: { type: 'String' },
-    UserAgent: { type: 'String' },
-    ResponseTime: { type: 'Number' },
-    Module: { type: 'String' },
-    ReturnStatus: { type: 'String' },
-    ReturnCode: { type: 'String' },
-    ReturnMsg: { type: 'String' },
+// const logDataSchema = {
+//     User: { type: 'String' },
+//     Url: { type: 'String', required: true },
+//     Database: { type: 'Array', default: [] },
+//     ClientIP: { type: 'String' },
+//     ClientOS: { type: 'String' },
+//     Browser: { type: 'String' },
+//     UserAgent: { type: 'String' },
+//     ResponseTime: { type: 'Number' },
+//     Module: { type: 'String' },
+//     ReturnStatus: { type: 'String' },
+//     ReturnCode: { type: 'String' },
+//     ReturnMsg: { type: 'String' },
 
-    StartTime: { type: 'Date' },
-    Ip: { type: 'String' },
+//     StartTime: { type: 'Date' },
+//     Ip: { type: 'String' },
 
-    lock: {type: 'Object' },
-};
+//     lock: {type: 'Object' },
+// };
 
 const checkFrequency = async (mdl, req, res, before) => {
     if (res.locals.blocked || !res.locals.sysLog) return false;
@@ -289,13 +289,13 @@ module.exports = {
 
         cache.connect();
 
-        // create log model
-        app.db.initModuleSchema(app, mdl, {
-            log: logDataSchema,
-        });
-        app.db.initModuleModel(app, mdl, {
-            log: '',
-        });
+        // // create log model
+        // app.db.initModuleSchema(app, mdl, {
+        //     log: logDataSchema,
+        // });
+        // app.db.initModuleModel(app, mdl, {
+        //     log: '',
+        // });
     },
     onLoadRouters: async (app, mdl) => {
         // init system config
