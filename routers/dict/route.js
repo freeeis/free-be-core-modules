@@ -17,23 +17,7 @@ router.get('/',
 
         return next();
     },
-    router.FindAllDocuments('dictionary', false, (req, res) => {
-        // get label from the labels list
-        if (res.locals.data && res.locals.data.total) {
-            res.locals.data.docs.forEach(doc => {
-                if (doc.Labels && doc.Labels.length) {
-                    const l = res.app.ctx.locale || res.app.config['defaultLocale'] || 'zh-cn';
-                    const lb = doc.Labels.find(ll => ll.Locale === l);
-                    if (lb) {
-                        doc.Label = lb.Label;
-                        doc.Description = lb.Description;
-                    }
-
-                    delete doc.Labels;
-                }
-            })
-        }
-    })
+    router.FindAllDocuments('dictionary')
 )
 
 router.post('/', async (req, res, next) => {
@@ -51,14 +35,6 @@ router.post('/', async (req, res, next) => {
         }
     }
 
-    // set labels
-    const l = res.app.ctx.locale || res.app.config['defaultLocale'] || 'zh-cn';
-    req.body.Labels = [{
-        Locale: l,
-        Label: req.body.Label || '',
-        Description: req.body.Description || ''
-    }]
-
     // info object
     if (req.body.Info)
         req.body.Info = JSON.parse(req.body.Info);
@@ -67,14 +43,6 @@ router.post('/', async (req, res, next) => {
 }, router.CreateDocument('dictionary'))
 
 router.put('/', (req, res, next) => {
-    // set labels
-    const l = res.app.ctx.locale || res.app.config['defaultLocale'] || 'zh-cn';
-    req.body.Labels = [{
-        Locale: l,
-        Label: req.body.Label || '',
-        Description: req.body.Description || ''
-    }];
-
     // info object
     if (req.body.Info)
         req.body.Info = JSON.parse(req.body.Info);
