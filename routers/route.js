@@ -3,8 +3,8 @@ const router = express.Router();
 
 // file upload
 router.post('/upload',
-    router.mdl.fileUpload,
-    router.mdl.imageThumb(app.config.ImageThumbWidth || 300),
+    (req, res, next) => router.mdl.fileUpload(req, res, next),
+    (req, res, next) => router.mdl.imageThumb(app.config.ImageThumbWidth || 300)(req, res, next),
     (req, res, next) => {
         if (!req.file) {
             res.makeError(400, 'Cannot recognize the uploaded file!');
