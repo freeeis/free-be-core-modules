@@ -9,6 +9,10 @@ module.exports = {
         await this.models['menu'].create({
             Category: c,
             Index: count,
+            Label: '菜单一',
+            Enabled: true,
+            Deleted: false,
+            Saved: true
         });
     },
 }
