@@ -32,7 +32,7 @@ router.get('/', (req, res, next) => {
 
 router.post('/',
     (req, res, next) => {
-        const passport = res.app.modules.passport;
+        const passport = res.app.modules.account;
         if (passport && req.body.Permission) {
             passport.utils.clearPermission(req.body.Permission);
         }
@@ -43,7 +43,7 @@ router.post('/',
 
 router.put('/',
     (req, res, next) => {
-        const passport = res.app.modules.passport;
+        const passport = res.app.modules.account;
         if (passport && req.body.Permission) {
             passport.utils.clearPermission(req.body.Permission);
         }
@@ -91,7 +91,7 @@ router.get('/menus',
     },
     router.FindAllDocuments('menu', false, async (req, res) => {
         // if we have passport enabled, check permission
-        const passport = res.app.modules.passport;
+        const passport = res.app.modules.account;
         let menus = [];
 
         if (passport) {
