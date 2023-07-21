@@ -43,7 +43,7 @@ const writeLogMW = (mdl) => async (req, res, next) => {
     }
 }
 
-async function _process_response_error(res) {
+async function _process_response_error(req, res) {
     if (!res || !res.locals || !res.locals.err) return;
 
     const error = res.locals.err;
@@ -60,7 +60,7 @@ async function _process_response_error(res) {
                     {
                         Category: cat.id,
                         Code: cat.Start + error.code,
-                        Locale: res.app.ctx.locale || res.app.config.defaultLocale
+                        Locale: req.body.locale || req.query.locale || res.app.ctx.locale || res.app.config.defaultLocale
                     }
                 );
 
@@ -73,15 +73,21 @@ async function _process_response_error(res) {
                     res.locals.err.code = 400;
                 } else {
                     // format error msg
-                    await res.app.models.error_code.create({
-                        Category: cat.id,
-                        Code: cat.Start + error.code,
-                        Description: (typeof error.msg) === 'string' ? error.msg : '',
-                        Locale: res.app.ctx.locale || res.app.config.defaultLocale,
-                        Message: (typeof error.msg) === 'string' ? error.msg : (error.msg.message || error.msg.code || error.msg).toString,
-                    }).catch((err) => {
-                        res.app.logger.error(err);
-                    })
+                    // crete error msg for each supported locales
+                    const locales = res.app.config.locales || [res.app.config.defaultLocale];
+                    for (let i = 0; i < locales.length; i += 1) {
+                        const locale = locales[i];
+              
+                        await res.app.models.error_code.create({
+                            Category: cat.id,
+                            Code: cat.Start + error.code,
+                            Description: (typeof error.msg) === 'string' ? error.msg : '',
+                            Locale: locale,
+                            Message: (typeof error.msg) === 'string' ? error.msg : (error.msg.message || error.msg.code || error.msg).toString,
+                        }).catch((err) => {
+                            res.app.logger.error(err);
+                        })
+                    }
 
                     res.locals.err.msg = {
                         code: typeof error.msg === 'number' ? Number(error.msg) : cat.Start + res.locals.err.code,
@@ -371,7 +377,7 @@ module.exports = {
         );
 
         app.use(async (req, res, next) => {
-            await _process_response_error(res);
+            await _process_response_error(req, res);
             return next();
         })
     },
@@ -381,7 +387,7 @@ module.exports = {
             // add some function to the response
             res.endWithErr = async (code, msg, mdl) => {
                 res.makeError(code, msg, mdl);
-                await _process_response_error(res)
+                await _process_response_error(req, res)
 
                 if (!res._headerSent) {
                     res.status(res.locals.err.code).send({ msg: res.locals.err.msg });

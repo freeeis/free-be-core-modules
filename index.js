@@ -175,11 +175,22 @@ module.exports = {
       End: { type: "Number", required: true, unique: true },
     },
     error_code: {
-      Category: { type: "ID", refer: "error_category" },
-      Code: { type: "Number", required: true, unique: true },
-      Description: { type: "String" },
-      Message: { type: "String", required: true },
-      Locale: { type: "String" },
+      Category: { type: 'ID', refer: 'error_category' },
+      Code: { type: 'Number', required: true },
+      Description: { type: 'String' },
+      Message: { type: 'String', required: true },
+      Locale: { type: 'String' },
+
+      __Indexes: [{
+          def: {
+              Category: 1,
+              Code: 1,
+              Locale: 1,
+          },
+          set: {
+              unique: true,
+          },
+      }]
     },
     menu: {
       Category: { type: "String", default: "DEFAULT" },
