@@ -73,8 +73,10 @@ module.exports = {
     });
 
     // key words
-    if (kwFilter.length) {
+    if (kwFilter.length > 1) {
       filters.$or = kwFilter;
+    } else if (kwFilter.length === 1) {
+      Object.assign(filters, kwFilter[0]);
     }
 
     return filters;

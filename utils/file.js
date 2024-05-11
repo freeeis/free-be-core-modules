@@ -84,9 +84,10 @@ csv.Parse = function (file) {
 // };
 
 
-const SupportedImageTypes = ['.png', '.jpg', '.jpeg'];
-const SupportedZipTypes = ['.zip', '.rar'];
+const SupportedImageTypes = ['.png', '.jpg', '.jpeg', '.bmp', '.gif'];
+const SupportedZipTypes = ['.zip', '.rar', '.7z', '.tar', '.gz', '.bz2', '.xz', '.tgz'];
 const SupportedDocsTypes = ['.doc', '.docx', '.xls', '.xlsx', '.pdf'];
+// const SupportedVideoTypes = ['.mp4', '.avi', '.mov', '.wmv', '.flv', '.mkv'];
 
 /**
  * 文件不存在返回false 若存在返回res设置对象

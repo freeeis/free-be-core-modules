@@ -180,7 +180,7 @@ const checkFrequency = async (mdl, req, res, before) => {
 
                 // check times
                 const existsRecords = await mdl.app.models.log.countDocuments({CreatedDate: {$gt: new Date(new Date() - lv.duration)}, ...urlCondition, ...userCondition});
-                if (existsRecords > lv.times) {
+                if (existsRecords >= lv.times) {
                     // lock and increase lock level
                     res.locals.sysLog.lock = lv;
                     res.locals.sysLog.lock.level = j;
