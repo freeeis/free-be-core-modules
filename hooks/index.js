@@ -23,6 +23,10 @@ const writeLogMW = (mdl) => async (req, res, next) => {
             // res.locals.sysLog.ReturnCode = res.locals.return.returnData.msg.code;
             res.locals.sysLog.ReturnMsg = res.locals.return.returnData.msg.message || res.locals.return.returnData.msg;
             res.locals.sysLog.ReturnMsg = res.locals.sysLog.ReturnMsg.message || res.locals.sysLog.ReturnMsg;
+
+            if (typeof res.locals.sysLog.ReturnMsg !== 'string') {
+                res.locals.sysLog.ReturnMsg = `${res.locals.sysLog.ReturnMsg}`;
+            }
         } else if (res.statusCode) {
             res.locals.sysLog.ReturnStatus = res.statusCode;
         }
