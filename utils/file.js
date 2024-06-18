@@ -264,29 +264,17 @@ const storage = multer.diskStorage({
 /**
  * 上传到指定的文件目录
  */
-
 const storageToDir = multer.diskStorage({
-  destination: function (req, file, cb) {
-    // let ext = path.extname(file.originalname);
-    // ext = ext.length>1 ? ext : '.' + mime.extension(file.mimetype);
-    // ext = ext.toLowerCase();
+  destination: function (req, _, cb) {
+    let dir = path.join(staticRoot, req.__fileStorePath);
 
-    // TODO: 期望可以通过可变的传入文件路径
-    //指定dir的文件夹子的名字   dir:  public/uploads/docs
-    // let fileDirPath = req.body.fileDirPath;
-    // let fileDirPath = res.locals.data.fileDirPath;
-    // let dir = path.join(__dirname, '../'+fileDirPath );
-
-    // uploadToDir.fileStorePath = 'uploads/officialdoc';
-    let dir = path.join(__dirname, '../public/' + uploadToDir.fileStorePath);
-
-    //文件夹不存储在则创建文件夹
+    //文件夹不存在则创建文件夹
     if (false === fs.existsSync(dir)) {
       fse.mkdirpSync(dir);
     }
     cb(null, dir);
   },
-  filename: function (req, file, cb) {
+  filename: function (_, file, cb) {
     let ext = path.extname(file.originalname);
     ext = ext.length > 1 ? ext : '.' + mime.extension(file.mimetype);
     require('crypto').pseudoRandomBytes(16, function (err, raw) {
