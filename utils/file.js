@@ -2,14 +2,14 @@ const fs = require('fs');
 const multer = require('multer');
 const fse = require('fs-extra');
 const path = require('path');
-const mime = require('mime');
+const mime = import('mime');
+const thumb = require('node-thumbnail').thumb;
 const parse = require('csv-parse');
 const AdmZip = require('adm-zip');
 const iconv = require('iconv-lite');
 const child_process = require('child_process');
-const uuid = require('uuid');
+const { v4:uuid } = require('uuid');
 const xlsx = require('xlsx');
-const sharp = require('sharp');
 
 // config
 const config = Object.merge(
@@ -82,7 +82,6 @@ csv.Parse = function (file) {
 
 //   });
 // };
-
 
 const SupportedImageTypes = ['.png', '.jpg', '.jpeg', '.bmp', '.gif'];
 const SupportedZipTypes = ['.zip', '.rar', '.7z', '.tar', '.gz', '.bz2', '.xz', '.tgz'];
@@ -227,7 +226,7 @@ const storage = multer.diskStorage({
     }
 
     let ext = path.extname(file.originalname);
-    ext = ext.length > 1 ? ext : '.' + mime.extension(file.mimetype);
+    ext = ext.length > 1 ? ext : '.' + mime.getExtension(file.mimetype);
     ext = ext.toLowerCase();
     let dir = '';
     const yyymm = (new Date()).toISOString().slice(0, 7).replace(/-/g, '');
@@ -254,7 +253,7 @@ const storage = multer.diskStorage({
   },
   filename: function (req, file, cb) {
     let ext = path.extname(file.originalname);
-    ext = ext.length > 1 ? ext : '.' + mime.extension(file.mimetype);
+    ext = ext.length > 1 ? ext : '.' + mime.getExtension(file.mimetype);
     require('crypto').pseudoRandomBytes(16, function (err, raw) {
       cb(null, (err ? undefined : raw.toString('hex')) + ext);
     });
@@ -266,7 +265,18 @@ const storage = multer.diskStorage({
  */
 const storageToDir = multer.diskStorage({
   destination: function (req, _, cb) {
-    let dir = path.join(staticRoot, req.__fileStorePath);
+    // let ext = path.extname(file.originalname);
+    // ext = ext.length>1 ? ext : '.' + mime.getExtension(file.mimetype);
+    // ext = ext.toLowerCase();
+
+    // TODO: 期望可以通过可变的传入文件路径
+    //指定dir的文件夹子的名字   dir:  public/uploads/docs
+    // let fileDirPath = req.body.fileDirPath;
+    // let fileDirPath = res.locals.data.fileDirPath;
+    // let dir = path.join(__dirname, '../'+fileDirPath );
+
+    // uploadToDir.fileStorePath = 'uploads/officialdoc';
+    let dir = path.join(__dirname, '../public/' + uploadToDir.fileStorePath);
 
     //文件夹不存在则创建文件夹
     if (false === fs.existsSync(dir)) {
@@ -276,7 +286,7 @@ const storageToDir = multer.diskStorage({
   },
   filename: function (_, file, cb) {
     let ext = path.extname(file.originalname);
-    ext = ext.length > 1 ? ext : '.' + mime.extension(file.mimetype);
+    ext = ext.length > 1 ? ext : '.' + mime.getExtension(file.mimetype);
     require('crypto').pseudoRandomBytes(16, function (err, raw) {
       cb(null, (err ? undefined : raw.toString('hex')) + ext);
     });
@@ -295,7 +305,7 @@ const makeThumb = (width = 160) => {
     }
 
     let ext = path.extname(req.file.originalname);
-    ext = ext.length > 1 ? ext : '.' + mime.extension(req.file.mimetype);
+    ext = ext.length > 1 ? ext : '.' + mime.getExtension(req.file.mimetype);
     ext = ext.toLowerCase();
 
     fse.ensureDirSync(path.join(staticRoot, 'thumb/', req.file.myDir + '/'));
@@ -303,40 +313,28 @@ const makeThumb = (width = 160) => {
     if (SupportedImageTypes.indexOf(ext) >= 0) {
       // 图片，生成缩略图。
       try {
-        sharp(path.join(staticRoot, 'image/', req.file.myDir + '/', req.file.filename))
-          .resize(width)
-          .toFile(
-            path.join(staticRoot, 'thumb/', req.file.myDir + '/', req.file.filename),
-            (err /* , file */) => {
-              if (err) {
-                res.makeError(500, '生成缩略图失败！' + err);
-                if (next)
-                  return next('route');
-              }
+        await thumb({
+          source: path.join(staticRoot, 'image/', req.file.myDir + '/', req.file.filename),
+          destination: path.join(staticRoot, 'thumb/', req.file.myDir + '/'),
+          prefix: '',
+          suffix: '',
+          digest: false,
+          hashingType: 'sha1',    // 'sha1', 'md5', 'sha256', 'sha512'
+          width: width,
+          concurrency: 1,         // number of CPUs
+          quiet: false,           // if set to 'true', console.log status messages will be supressed
+          overwrite: false,
+          skip: true,             // Skip generation of existing thumbnails
+          basename: undefined,    // basename of the thumbnail. If unset, the name of the source file is used as basename.
+          ignore: true,           // Ignore unsupported files in "dest"
+        },
+          (file, err) => {
+            if (err) {
+              res.makeError(500, '生成缩略图失败！' + err);
+              if (next)
+                return next('route');
             }
-          );
-        // await thumb({
-        //   source: path.join(staticRoot, 'image/', req.file.myDir + '/', req.file.filename),
-        //   destination: path.join(staticRoot, 'thumb/', req.file.myDir + '/'),
-        //   prefix: '',
-        //   suffix: '',
-        //   digest: false,
-        //   hashingType: 'sha1',    // 'sha1', 'md5', 'sha256', 'sha512'
-        //   width: width,
-        //   concurrency: 1,         // number of CPUs
-        //   quiet: false,           // if set to 'true', console.log status messages will be supressed
-        //   overwrite: false,
-        //   skip: true,             // Skip generation of existing thumbnails
-        //   basename: undefined,    // basename of the thumbnail. If unset, the name of the source file is used as basename.
-        //   ignore: true,           // Ignore unsupported files in "dest"
-        // },
-        //   (file, err) => {
-        //     if (err) {
-        //       res.makeError(500, '生成缩略图失败！' + err);
-        //       if (next)
-        //         return next('route');
-        //     }
-        //   });
+          });
       } catch (ex) {
         res.makeError(500, '生成缩略图失败！' + ex);
         if (next)
@@ -401,7 +399,7 @@ const unZip = function () {
     }
 
     let ext = path.extname(req.file.filename);
-    ext = ext.length > 1 ? ext : '.' + mime.extension(req.file.mimetype);
+    ext = ext.length > 1 ? ext : '.' + mime.getExtension(req.file.mimetype);
     ext = ext.toLowerCase();
 
     if (ext !== '.zip') {
@@ -491,9 +489,9 @@ const zip = function (f, content, comment = '') {
 const doc2Jpg = function () {
   return async (req, res, next) => {
     let options = res.locals.options || {};
-    let hash = uuid.v4();
+    let hash = uuid();
     let ext = path.extname(req.file.filename);
-    ext = ext.length > 1 ? ext : '.' + mime.extension(req.file.mimetype);
+    ext = ext.length > 1 ? ext : '.' + mime.getExtension(req.file.mimetype);
     ext = ext.toLowerCase();
 
     let tempPDF;
@@ -545,7 +543,7 @@ const doc2PDF = function (input, output) {
 
 const PDF2Jpg = async function (input, outPath, options) {
   return new Promise((resolve, reject) => {
-    let hash = uuid.v4();
+    let hash = uuid();
     let output = outPath + '/' + hash + '/' + hash + '.jpg';
     let quality = options.quality || 80; // 品质
     let density = options.density || 120; // 像素密度
@@ -705,7 +703,7 @@ const ExcelParse = function () {
     }
 
     let ext = path.extname(req.file.filename);
-    ext = ext.length > 1 ? ext : '.' + mime.extension(req.file.mimetype);
+    ext = ext.length > 1 ? ext : '.' + mime.getExtension(req.file.mimetype);
     ext = ext.toLowerCase();
 
     if (!(ext === '.xls' || ext === '.xlsx')) {

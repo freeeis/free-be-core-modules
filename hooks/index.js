@@ -403,6 +403,23 @@ module.exports = {
         });
     },
     onRoutersReady: async (app) => {
+        // unlock api
+        app.get('/api/log/unlock', async (req, res, next) => {
+            const { user, ip } = req.query;
+            const userCondition = user ? {User: user} : {};
+            const ipCondition = ip ? {Ip: ip} : {};
+            const condition = { ...userCondition, ...ipCondition, lock: {$exists: true}, 'lock.lock': {$exists: true, $ne: 0} };
+
+            res.app.logger.error(`unlock ${user || ''}, ${ip || ''}`);
+            const updateRes = await app.models.log.updateMany(condition, {$set: {'lock.lock': 0}});
+            
+            res.addData({
+                unlocked: updateRes.nModified || 0,
+            }, true);
+
+            return next();
+        });
+
         // add default error category
         if (await app.models.error_category.countDocuments({ Name: 'DEFAULT' }) <= 0) {
             await app.models.error_category.create({
