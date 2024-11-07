@@ -223,13 +223,12 @@ module.exports = {
         // connecting to redis server
         let cache = redis.createClient({ socket : { host: mdl.config.redisHost || '127.0.0.1', port: mdl.config.redisPort || 6379 } });
 
+        app.redis = cache;
+
         cache.on('error', (err) => {
             app.logger.error(`ERROR in redis module: ${err}`);
         });
         cache.on("ready", async () => {
-
-            app.redis = cache;
-
             // we support string, json object
             app.cache = {
                 set: async (k, v, t) => {
