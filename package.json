@@ -1,6 +1,6 @@
 {
   "name": "free-be-core-modules",
-  "version": "0.0.14",
+  "version": "0.0.15",
   "description": "The build-in core modules of FreeEIS BE.",
   "main": "index.js",
   "author": "zhiquan",
