@@ -363,6 +363,20 @@ const upload = (req, res, next) => {
   }).single('file')(req, res, next);
 }
 
+/**
+ * 上传多文件 中间件
+ */
+const uploadFiles = (req, res, next) => {
+  const limit = (res.app && res.app.config) ? (res.app.config.uploadFileSizeLimit || 10 * 1024 * 1024) : 10 * 1024 * 1024
+  multer({
+    storage: storage,
+    limits: {
+      fileSize: limit,
+      fieldSize: limit
+    }
+  }).array('files', res.locals.__max_files_count)(req, res, next);
+}
+
 const uploadNoLimit = (req, res, next) => {
   // console.log(res.app.config)
   const limit = (res.app && res.app.config) ? (res.app.config.adminUploadFileSizeLimit || 1000 * 1024 * 1024) : 1000 * 1024 * 1024
@@ -798,6 +812,7 @@ module.exports = {
   PDF2Jpg: PDF2Jpg,
   doc2Jpg: doc2Jpg,           // middleware
   fileUpload: upload,         // middleware
+  uploadFiles,
   fileUploadWithoutLimit: uploadNoLimit,
   fileUploadTo: uploadToDir,  // middleware
   imageThumb: makeThumb,      // middleware

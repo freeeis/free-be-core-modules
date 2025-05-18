@@ -19,6 +19,30 @@ router.post('/upload',
         })
 
         return next();
-    });
+    }
+);
+
+// multiple files upload without thumbnail
+router.post('/uploads',
+    (req, res, next) => router.mdl.uploadFiles(req, res, next),
+    (req, res, next) => {
+        if (!req.files || req.files.length === 0) {
+            res.makeError(400, 'Cannot recognize the uploaded file!');
+            if (next) {
+                return next('route');
+            }
+        }
+
+        res.addData(
+            req.files.map((file) => {
+                return {
+                    id: path.join(file.myDir, file.filename)
+                }
+            }),
+        );
+
+        return next();
+    }
+);
 
 module.exports = router;
