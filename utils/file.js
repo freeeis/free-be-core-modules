@@ -220,9 +220,15 @@ const staticRoot = config.staticFolders[0] || path.join(__dirname, '../public/up
 const getStaticFolderOfFile = (file) => {
   if (!file) return staticRoot;
 
-  let ext = path.extname(file.originalname);
-  ext = ext.length > 1 ? ext : '.' + mime.getExtension(file.mimetype);
-  ext = ext.toLowerCase();
+  let ext;
+  if (typeof file === 'string') {
+    ext = path.extname(file);
+  } else {
+    ext = path.extname(file.originalname);
+    ext = ext.length > 1 ? ext : '.' + mime.getExtension(file.mimetype);
+    ext = ext.toLowerCase();
+  }
+
   let dir = '';
 
   if (SupportedZipTypes.indexOf(ext) >= 0) {
