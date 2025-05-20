@@ -251,7 +251,7 @@ const storage = multer.diskStorage({
     const yyymm = (new Date()).toISOString().slice(0, 7).replace(/-/g, '');
     file.myDir = yyymm;
 
-    let dir = path.join(getStaticFolder(file), yyymm);
+    let dir = path.join(getStaticFolderOfFile(file), yyymm);
 
     //文件夹不存在则创建文件夹
     if (false === fs.existsSync(dir)) {
