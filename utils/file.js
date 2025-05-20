@@ -217,6 +217,29 @@ let unzipFile = function (file) {
 };
 
 const staticRoot = config.staticFolders[0] || path.join(__dirname, '../public/uploads');
+const getStaticFolderOfFile = (file) => {
+  if (!file) return staticRoot;
+
+  let ext = path.extname(file.originalname);
+  ext = ext.length > 1 ? ext : '.' + mime.getExtension(file.mimetype);
+  ext = ext.toLowerCase();
+  let dir = '';
+
+  if (SupportedZipTypes.indexOf(ext) >= 0) {
+    dir = path.join(staticRoot, 'zip');
+  }
+  else if (SupportedDocsTypes.indexOf(ext) >= 0) {
+    dir = path.join(staticRoot, 'docs');
+  }
+  else if (SupportedImageTypes.indexOf(ext) >= 0) {
+    dir = path.join(staticRoot, 'image');
+  }
+  else {
+    dir = path.join(staticRoot, 'misc');
+  }
+
+  return dir;
+}
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -225,25 +248,10 @@ const storage = multer.diskStorage({
       return;
     }
 
-    let ext = path.extname(file.originalname);
-    ext = ext.length > 1 ? ext : '.' + mime.getExtension(file.mimetype);
-    ext = ext.toLowerCase();
-    let dir = '';
     const yyymm = (new Date()).toISOString().slice(0, 7).replace(/-/g, '');
     file.myDir = yyymm;
 
-    if (SupportedZipTypes.indexOf(ext) >= 0) {
-      dir = path.join(staticRoot, 'zip/' + yyymm);
-    }
-    else if (SupportedDocsTypes.indexOf(ext) >= 0) {
-      dir = path.join(staticRoot, 'docs/' + yyymm);
-    }
-    else if (SupportedImageTypes.indexOf(ext) >= 0) {
-      dir = path.join(staticRoot, 'image/' + yyymm);
-    }
-    else {
-      dir = path.join(staticRoot, 'misc/' + yyymm);
-    }
+    let dir = path.join(getStaticFolder(file), yyymm);
 
     //文件夹不存在则创建文件夹
     if (false === fs.existsSync(dir)) {
@@ -803,6 +811,7 @@ const exportCSV = function (fname = 'export', timestamp = true, express = false)
 };
 
 module.exports = {
+  getStaticFolderOfFile,
   csv,
   fileDld: fileDownload,
   fileDel: fileDeleteSync,
