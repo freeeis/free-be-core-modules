@@ -12,15 +12,15 @@
   },
   "dependencies": {
     "adm-zip": "^0.5.16",
-    "csv-parse": "^5.3.6",
-    "fs-extra": "^11.2.0",
+    "csv-parse": "^5.6.0",
+    "fs-extra": "^11.3.0",
     "iconv-lite": "^0.6.3",
     "multer": "^1.4.5-lts.1",
     "node-thumbnail": "^0.15.0",
     "redis": "^4.6.5",
     "redis-rejson": "^1.0.0",
     "ua-parser-js": "^1.0.34",
-    "uuid": "^11.0.2",
+    "uuid": "^11.1.0",
     "xlsx": "^0.18.5"
   }
 }

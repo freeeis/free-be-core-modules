@@ -240,6 +240,9 @@ module.exports = {
         Ip: { type: 'String' },
 
         lock: {type: 'Object' },
+
+        Body: { type: 'String' },
+        Method: { type: 'String' },
     },
   },
   i18n: {

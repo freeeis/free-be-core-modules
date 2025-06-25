@@ -36,6 +36,8 @@ const writeLogMW = (mdl) => async (req, res, next) => {
 
         if (req.user && req.user.id) res.locals.sysLog.User = req.user.id;
 
+        res.locals.sysLog.Body = JSON.stringify(req.body || {});
+
         // write to db
         if (res.app.models.log)
             res.app.models.log.create(res.locals.sysLog);
@@ -473,6 +475,7 @@ module.exports = {
                 UserAgent: req.headers['user-agent'],
                 StartTime: new Date(),
                 Url: req.originalUrl,
+                Method: req.method,
                 Ip: req.headers['x-forwarded-for'] ||
                     (req.connection && req.connection.remoteAddress) ||
                     (req.socket && req.socket.remoteAddress) ||
