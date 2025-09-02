@@ -3,6 +3,8 @@ module.exports = {
     const filters = {};
     const kwFilter = [];
     (flts || []).forEach((ff) => {
+      if (!ff || !ff.Name) return;
+      
       const fName = ff.Name.replace(/\./g, "_DOT_");
       if (query.kw) query.kw = query.kw.trim();
       if (ff && ff.Name && (query[fName] !== void 0 || (query.kw && ff.Type === 'String'))) {
