@@ -256,16 +256,49 @@ module.exports = {
                     if (!k) return;
 
                     return await new Promise((resolve, reject) => {
-                        cache.get(k).then((data) => {
-                            let obj = {};
-                            try {
-                                obj = JSON.parse(data);
-                            } catch(_){
-                                //
+                        cache.type(k).then((ktype) => {
+                            let getFuncName = 'get';
+                            let params = [k];
+                            switch (ktype) {
+                                case 'string':
+                                    getFuncName = 'get';
+                                    break;
+                                case 'list':
+                                    getFuncName = 'lrange';
+                                    params.push(0, -1);
+                                    break;
+                                case 'hash':
+                                    getFuncName = 'hgetall';
+                                    break;
+                                case 'set':
+                                    getFuncName = 'smembers';
+                                    break;
+                                case 'zset':
+                                    getFuncName = 'zrange';
+                                    params.push(0, -1, 'WITHSCORES');
+                                    break;
+                                case 'stream':
+                                    getFuncName = 'xrange';
+                                    params.push('-', '+', 'COUNT', 100);
+                                    break;
+                                case 'ReJSON-RL':
+                                    getFuncName = 'sendCommand';
+                                    params = [['JSON.GET', k]];
+                                default:
+                                    break;
                             }
-                            resolve(obj);
-                        }).catch((err) => {
-                            reject(err);
+
+                            cache[getFuncName](...params).then((data) => {
+                                let obj = {};
+                                try {
+                                    obj = JSON.parse(data);
+                                } catch(_){
+                                    //
+                                }
+                                resolve(obj);
+                            }).catch((err) => {
+                                reject(err);
+                            });
                         });
                     });
                 },
