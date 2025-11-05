@@ -16,6 +16,7 @@ router.get('/',
             'Message',
             'Description',
             'Locale',
+            'Code',
         ];
 
         return next();
