@@ -202,6 +202,7 @@ module.exports = {
       Label: { type: "String", default: "" },
       Icon: { type: "String", default: "" },
       Enabled: { type: "Boolean", default: true },
+      NoLink: { type: "Boolean", default: false },
       Permission: { type: "Object", default: {} },
     },
     config: {

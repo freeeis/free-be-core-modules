@@ -9,6 +9,7 @@ router.get('/', (req, res, next) => {
         'Label',
         'Index',
         'Enabled',
+        'NoLink',
         'Permission',
         'Category',
         'Icon',
@@ -137,13 +138,14 @@ router.get('/menus',
                     );
 
                     // remove empty parent menus
-                    if ((sub && sub.length > 0) || m.Route) {
+                    if ((sub && sub.length > 0) || m.Route || (!m.Route && m.NoLink)) {
                         // delete unused fields
                         levelMenus.push({
                             Route: m.Route,
                             Label: m.Label,
                             Index: m.Index,
                             Icon: m.Icon,
+                            NoLink: m.NoLink,
                             Sub: sub,
                         });
                     }
