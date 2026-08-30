@@ -96,4 +96,60 @@ router.post('/trans',
   }
 );
 
+/**
+ * Import a dictionary tree exported by /dict/export/full.
+ * Existing root dictionaries are skipped as a whole to keep the operation safe.
+ */
+router.post('/full', async (req, res, next) => {
+  const dictionaries = req.body && req.body.dictionaries;
+  if (!Array.isArray(dictionaries)) return res.endWithErr(400);
+
+  const model = res.app.models.dictionary;
+  let created = 0;
+  let skipped = 0;
+
+  const createNode = async (source, parentId) => {
+    if (!source || typeof source !== 'object' || !source.Name) return false;
+
+    const data = {
+      Name: source.Name,
+      Description: source.Description,
+      Type: source.Type || 'String',
+      Value: source.Value,
+      Image: source.Image,
+      Labels: Array.isArray(source.Labels) ? source.Labels : [],
+      Index: Number.isFinite(source.Index) ? source.Index : 0,
+      Info: source.Info,
+      Enabled: source.Enabled !== false,
+      BuiltIn: false,
+    };
+    if (parentId) data.Parent = parentId;
+
+    const node = await model.create(data);
+    created += 1;
+    const children = Array.isArray(source.Children) ? source.Children : [];
+    for (const child of children) await createNode(child, node.id);
+    return true;
+  };
+
+  for (const source of dictionaries) {
+    if (!source || !source.Name) continue;
+    const exists = await model.findOne({
+      Name: source.Name,
+      $or: [
+        { Parent: { $exists: false } },
+        { Parent: null },
+      ],
+    });
+    if (exists) {
+      skipped += 1;
+      continue;
+    }
+    await createNode(source);
+  }
+
+  res.addData({ created, skipped });
+  return next();
+});
+
 module.exports = router;

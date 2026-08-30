@@ -65,7 +65,7 @@ router.get('/trans',
 
         for (let i = 0; i < localeKeys.length; i += 1) {
             const locale = localeKeys[i];
-            if (locale === 'zh-cn' && !req.body.z) continue;
+            if (locale === 'zh-cn' && !req.query.z) continue;
 
             ret.c.push(locales[locale].map(lc => `${lc.Name}\t${lc.CN}\t${lc.Locale}\t${lc.Trans}`).join('\n'));
         }
@@ -77,5 +77,47 @@ router.get('/trans',
         return next();
     }
 );
+
+/**
+ * Export the dictionary tree for moving dictionaries between systems.
+ * Database ids and built-in flags are intentionally omitted.
+ */
+router.get('/full', async (req, res, next) => {
+    const allDicts = await res.app.models.dictionary.find({}).lean();
+    const childrenByParent = {};
+    const roots = [];
+
+    allDicts.forEach((dict) => {
+        const parent = dict.Parent ? String(dict.Parent) : '';
+        if (!childrenByParent[parent]) childrenByParent[parent] = [];
+        childrenByParent[parent].push(dict);
+    });
+
+    const exportNode = (dict) => ({
+        Name: dict.Name,
+        Description: dict.Description,
+        Type: dict.Type,
+        Value: dict.Value,
+        Image: dict.Image,
+        Labels: dict.Labels || [],
+        Index: dict.Index,
+        Info: dict.Info,
+        Enabled: dict.Enabled,
+        Children: (childrenByParent[String(dict.id)] || [])
+            .sort((a, b) => (a.Index || 0) - (b.Index || 0))
+            .map(exportNode),
+    });
+
+    (childrenByParent[''] || [])
+        .sort((a, b) => (a.Index || 0) - (b.Index || 0))
+        .forEach((dict) => roots.push(exportNode(dict)));
+
+    res.addData({
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        dictionaries: roots,
+    });
+    return next();
+});
 
 module.exports = router;
