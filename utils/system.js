@@ -7,48 +7,52 @@ module.exports = {
         const configModel = this.models['config'];
         if (!configModel) throw new Error('Cannot find the config model!');
 
-        if (await configModel.countDocuments({
+        const filter = {
             Category: c,
             Name: n,
-        }) > 0) {
-            const theConfig = await configModel.findOne({
-                Category: c,
-                Name: n,
-            });
+        };
 
-            if(theConfig){
-                // update
-                theConfig.Description = d;
-
-                if (f && f.Index) theConfig.Index = Number(f.Index);
-                if (typeof i === 'number') theConfig.Index = i;
-
-                if (t) theConfig.Type = t;
-                if (f) theConfig.Field = f;
-
-                await theConfig.save();
-            }
-            
-            return;
+        const set = { };
+        if (d) {
+            set.Description = d;
         }
+        
+        if (v !== undefined && v !== '') set.Value = v;
 
-        const data = {
-            Category: c,
-            Name: n,
+        if (f && f.Index !== undefined) {
+            const fieldIndex = Number(f.Index);
+            if (Number.isFinite(fieldIndex)) set.Index = fieldIndex;
+        }
+        if (typeof i === 'number' && Number.isFinite(i)) set.Index = i;
+
+        if (t) set.Type = t;
+        if (f) set.Field = f;
+
+        const setOnInsert = {
+            ...filter,
             Value: v,
             Description: d,
         };
 
-        if (typeof i === 'number') data.Index = i;
-        else {
+        if (set.Index === undefined) {
             const count = await configModel.countDocuments({});
-            data.Index = count;
+            setOnInsert.Index = count;
+        } else {
+            setOnInsert.Index = set.Index;
         }
 
-        if (t) data.Type = t;
-        if (f) data.Field = f;
+        if (t) setOnInsert.Type = t;
+        if (f) setOnInsert.Field = f;
 
-        await configModel.create(data);
+        Object.keys(set).forEach((key) => {
+            delete setOnInsert[key];
+        });
+
+        await configModel.findOneAndUpdate(
+            filter,
+            { $set: set, $setOnInsert: setOnInsert },
+            { upsert: true, new: true },
+        );
     },
     getSystemConfig: async function (n, c = 'DEFAULT') {
         if (!n || typeof n !== 'string') {
