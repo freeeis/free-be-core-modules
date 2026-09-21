@@ -6,6 +6,24 @@ module.exports = {
       if (!ff || !ff.Name) return;
       
       const fName = ff.Name.replace(/\./g, "_DOT_");
+      if (ff.Multiple === true) {
+        let values;
+        if (query[fName] !== undefined) {
+          const value = query[fName];
+          values = Array.isArray(value) ? value : typeof value === 'string' ? value.split(',') : [value];
+        } else {
+          const prefix = `${fName}_DOT_`;
+          const indexedKeys = Object.keys(query)
+            .filter(key => key.startsWith(prefix) && /^\d+$/.test(key.slice(prefix.length)))
+            .sort((left, right) => Number(left.slice(prefix.length)) - Number(right.slice(prefix.length)));
+          if (indexedKeys.length) values = indexedKeys.map(key => query[key]);
+        }
+        if (values) {
+          values = values.filter(value => value !== undefined && value !== null && value !== '');
+          if (values.length) filters[ff.Name] = { $in: values };
+          return;
+        }
+      }
       if (query.kw) query.kw = query.kw.trim();
       if (ff && ff.Name && (query[fName] !== void 0 || (query.kw && ff.Type === 'String'))) {
         // provided
